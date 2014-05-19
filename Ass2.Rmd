@@ -1,0 +1,121 @@
+Activity Monitoring Peer Assessment 1
+========================================================
+
+**Load Packages**
+```{r, message=FALSE}
+library(dplyr)
+library(stringr)
+library(reshape2)
+library(mice)
+library(lattice)
+```
+**Read Data**
+
+```{r}
+activity<-read.csv("activity.csv", header=T)
+```
+
+**Clean Data**
+```{r, message=FALSE}
+dly_steps<-select(activity, date, steps)
+daily<-melt(dly_steps)
+ds<-dcast(daily, date~., fun.aggregate=sum)
+colnames(ds)[2]<-"steps"
+```
+**Mean Total Steps Taken Per Day?**
+```{r fig.width=7, fig.height=6, message=FALSE}
+library(dplyr)
+library(stringr)
+library(reshape2)
+activity<-read.csv("activity.csv", header=T)
+dly_steps<-select(activity, date, steps)
+daily<-melt(dly_steps)
+ds<-dcast(daily, date~., fun.aggregate=sum)
+colnames(ds)[2]<-"steps"
+hist(ds$steps)
+```
+The mean was 
+`r as.integer(mean(ds$steps, na.rm=T))`
+
+The median was
+`r median(ds$steps, na.rm=T)`
+
+
+
+**What is the average daily activity pattern?**
+
+```{r fig.width=7, fig.height=6}
+library(dplyr)
+library(stringr)
+library(reshape2)
+activity<-read.csv("activity.csv", header=T)
+adap<-select(activity, interval, steps)
+adapmelt<-melt(adap, id.vars="interval")
+adapcast<-dcast(adapmelt, interval~., fun.aggregate=mean, na.rm=T)
+colnames(adapcast)[2]<-"steps"
+adts<-as.ts(adapcast$steps, na.rm=T, frequency=1)
+plot(adts)
+```
+Which time interval has the greatest average number of steps? The
+`r adapcast$interval[which(adapcast$steps==max(adapcast$steps))]`th
+
+**Imputing Missing Values**
+What are the number of NAs?
+
+Number of NAs can be found by 
+```{r}
+activity<-read.csv("activity.csv", header=T)
+sum(is.na(activity))
+```
+
+A breakdown of course occurs in 
+```{r}
+summary(activity)
+```
+We will use the MICE package to impute
+
+```{r, cache=TRUE, message=FALSE}
+imp<-mice(activity)
+impactivity<-complete(imp)
+
+impdly_steps<-select(impactivity, date, steps)
+
+impdaily<-melt(impdly_steps)
+impds<-dcast(impdaily, date~., fun.aggregate=sum)
+colnames(impds)[2]<-"steps"
+```
+
+Now we can graph the output and also look at the mean and median
+```{r fig.width=7, fig.height=6}
+hist(impds$steps)
+```
+The mean of the imputed steps is
+`r as.integer(mean(impds$steps))`
+
+The median of the imputed steps is
+`r median(impds$steps)`
+
+**Differences between Weekdays and Weekends?**
+We will use the imputed dataset from now on.
+```{r}
+activity<-impactivity
+activity$date<-as.Date(activity$date)
+Weekends<-filter(activity, weekdays(activity$date)=="Saturday"|weekdays(activity$date)=="Sunday")
+Weekdays<-filter(activity, weekdays(activity$date)!="Saturday"|weekdays(activity$date)!="Sunday")
+Weekends<-select(Weekends, interval, steps)
+wkd<-melt(Weekends, id.vars="interval")
+wkends<-dcast(wkd, interval~., fun.aggregate=mean)
+colnames(wkends)[2]<-"steps"
+wkends<-as.ts(wkends$steps, frequency=1)
+
+Weekdays<-select(Weekdays, interval, steps)
+wky<-melt(Weekdays, id.vars="interval")
+wkdys<-dcast(wky, interval~., fun.aggregate=mean)
+colnames(wkdys)[2]<-"steps"
+wkdys<-as.ts(wkdys$steps, frequency=1)
+
+
+par(mfrow=c(2, 1))
+plot(wkends)
+plot(wkdys)
+```
