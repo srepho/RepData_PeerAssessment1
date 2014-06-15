@@ -1,0 +1,14 @@
+base
+datasets
+dplyr
+graphics
+grDevices
+knitr
+lattice
+methods
+mice
+Rcpp
+reshape2
+stats
+stringr
+utils
